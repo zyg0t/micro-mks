@@ -1,2 +1,2 @@
 ## Install / uninstall service
-`curl -sSL https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/setup.sh | bash`
+`curl -sSL https://raw.githubusercontent.com/zyg0t/micro-mks/main/setup.sh | bash`
