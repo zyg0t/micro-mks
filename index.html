@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MKS Robin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url("https://fonts.googleapis.com/css2?family=Inter:wght=500;600;700;800&display=swap");
+
+        :root {
+            --bg-body: #0a0a0a;
+            --bg-card: #141414;
+            --text: #f5f5f5;
+            --border: #333333;
+            --font-family: "Inter", system-ui, sans-serif;
+        }
+
+        body {
+            font-family: var(--font-family);
+            color: var(--text);
+            background: radial-gradient(circle at center, var(--bg-card) 0%, var(--bg-body) 100%);
+            background-attachment: fixed;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #555555 !important;
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08) !important;
+        }
+
+        button {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        button:active:not(:disabled) {
+            transform: scale(0.96);
+        }
+
+        dialog::backdrop {
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(6px);
+        }
+    </style>
+</head>
+<body class="min-h-screen w-screen flex items-center justify-center p-4 md:p-8 select-none font-medium">
+
+    <div class="w-full max-w-5xl bg-[#141414]/50 border border-[#333] rounded-3xl p-6 md:p-10 backdrop-blur-xl space-y-6 shadow-2xl">
+
+        <header class="flex items-center justify-between border-b border-[#222] pb-6 gap-4">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-white flex items-center gap-3">
+                    <span id="status-dot" class="inline-block w-3.5 h-3.5 rounded-full bg-rose-600 transition-colors duration-500"></span>
+                    MKS Robin
+                </h1>
+                <p class="text-sm font-bold text-[#a3a3a3] mt-1.5">Currently: <span id="status" class="text-white font-extrabold">Connecting...</span></p>
+            </div>
+            <div>
+                <button onclick="openModal('modal-terminal')" title="Open Console" class="p-3 bg-white text-black rounded-xl hover:bg-[#eaeaea] shadow-md flex items-center justify-center">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <section class="bg-[#141414] border border-[#333] rounded-2xl p-5 grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+            <div class="md:col-span-1">
+                <h3 class="text-sm font-extrabold tracking-wider text-[#a3a3a3] uppercase">Files on Memory Card</h3>
+            </div>
+            <div class="md:col-span-2">
+                <select id="sd-file-list" onchange="handleFileSelection(this.value)" class="w-full bg-[#1a1a1a] border border-[#333] rounded-xl px-4 py-3.5 text-sm font-bold text-white cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
+                    <option value="">Searching memory card...</option>
+                </select>
+            </div>
+        </section>
+
+        <main class="grid grid-cols-1 md:grid-cols-12 gap-6">
+
+            <section class="bg-[#141414] border border-[#333] rounded-2xl p-6 md:col-span-5 flex flex-col justify-between space-y-6">
+                <div>
+                    <h3 class="text-sm font-extrabold tracking-wider text-[#a3a3a3] uppercase">Actions</h3>
+                </div>
+
+                <div class="flex flex-col gap-3">
+                    <div class="grid grid-cols-2 gap-3">
+                        <button id="btn-start" onclick="triggerStateVerifiedAction('start', 'printing', '/control/start')" class="bg-white text-black py-4 rounded-xl font-extrabold text-sm tracking-wider hover:bg-[#eaeaea] disabled:opacity-20 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                            START
+                        </button>
+                        <button id="btn-pause" onclick="triggerStateVerifiedAction('pause', 'paused', '/control/pause')" class="bg-[#1a1a1a] border border-[#333] py-4 rounded-xl font-extrabold text-sm tracking-wider text-white hover:bg-[#252525] disabled:opacity-20 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                            PAUSE
+                        </button>
+                    </div>
+                    <button id="btn-stop" onclick="openAbortConfirmation()" class="w-full bg-red-950/30 border border-red-900/60 py-4 rounded-xl font-extrabold text-sm tracking-wider text-red-400 hover:bg-red-950/50 disabled:opacity-20 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4 fill-none stroke-currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                        ABORT JOB
+                    </button>
+                </div>
+            </section>
+
+            <section class="bg-[#141414] border border-[#333] rounded-2xl p-6 md:col-span-7 flex flex-col justify-center min-h-[200px]">
+                <div id="view-active-job" class="space-y-5 flex flex-col justify-between h-full w-full">
+                    <div class="flex justify-between items-start">
+                        <div class="max-w-[70%]">
+                            <span class="text-xs font-extrabold tracking-widest text-emerald-400 uppercase block" id="job-header-tag">Processing Job</span>
+                            <h4 class="text-lg font-extrabold text-white mt-1 truncate" id="filename">Ready for instruction</h4>
+                        </div>
+                        <span class="text-4xl font-black font-mono tracking-tight text-white" id="progress-lbl">0%</span>
+                    </div>
+
+                    <div class="space-y-2.5">
+                        <div class="w-full bg-[#1a1a1a] border border-[#222] rounded-full p-1">
+                            <div id="progress-fill" class="bg-white h-2.5 rounded-full transition-all duration-300" style="width: 0%;"></div>
+                        </div>
+                        <div class="flex justify-between text-xs font-bold text-[#a3a3a3] font-mono pt-1">
+                            <div>Elapsed: <span id="time_elapsed" class="text-white font-extrabold">00:00:00</span></div>
+                            <div>Remaining: <span id="time_remaining" class="text-white font-extrabold">Idle</span></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section onclick="openModal('modal-metrics')" class="bg-[#141414] border border-[#333] rounded-2xl p-6 md:col-span-12 grid grid-cols-2 gap-6 cursor-pointer hover:border-[#444] transition-all">
+                <div class="border-r border-[#222] pr-2">
+                    <span class="text-xs font-extrabold text-[#a3a3a3] uppercase tracking-wider block mb-1">Nozzle Temp</span>
+                    <span class="text-2xl font-black text-white"><span id="tool0">0</span><span class="text-sm font-bold text-[#8c8c8c]"> °C</span></span>
+                </div>
+                <div class="pl-2">
+                    <span class="text-xs font-extrabold text-[#a3a3a3] uppercase tracking-wider block mb-1">Bed Temp</span>
+                    <span class="text-2xl font-black text-white"><span id="bed">0</span><span class="text-sm font-bold text-[#8c8c8c]"> °C</span></span>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <dialog id="modal-confirm-print" class="bg-[#141414] border border-[#333] rounded-2xl p-6 w-full max-w-md text-[#eaeaea]">
+        <h3 class="text-lg font-extrabold text-white tracking-tight flex items-center gap-2">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+            Confirm Print Job
+        </h3>
+        <p class="text-sm font-semibold text-[#a3a3a3] mt-3">Are you sure you want to load and begin printing this file directly onto the machine?</p>
+        <p id="confirm-print-filename" class="text-xs font-mono font-bold bg-[#0a0a0a] border border-[#222] p-3 rounded-xl mt-3 truncate text-white"></p>
+        <div class="flex gap-3 mt-6">
+            <button onclick="closeModal('modal-confirm-print')" class="flex-1 bg-[#1a1a1a] border border-[#333] py-3 rounded-xl font-extrabold text-xs tracking-wider text-[#a3a3a3] hover:bg-[#252525]">CANCEL</button>
+            <button id="btn-confirm-print-execute" class="flex-1 bg-white text-black py-3 rounded-xl font-extrabold text-xs tracking-wider hover:bg-[#eaeaea]">LAUNCH PRINT</button>
+        </div>
+    </dialog>
+
+    <dialog id="modal-confirm-abort" class="bg-[#141414] border border-[#333] rounded-2xl p-6 w-full max-w-md text-[#eaeaea]">
+        <h3 class="text-lg font-extrabold text-red-500 tracking-tight flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            Abort print
+        </h3>
+        <div class="flex gap-3 mt-6">
+            <button onclick="closeModal('modal-confirm-abort')" class="flex-1 bg-[#1a1a1a] border border-[#333] py-3 rounded-xl font-extrabold text-xs tracking-wider text-[#a3a3a3] hover:bg-[#252525]">CANCEL</button>
+            <button id="btn-confirm-abort-execute" onclick="triggerStateVerifiedAction('stop', 'idle', '/control/stop')" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-extrabold text-xs tracking-wider hover:bg-red-500 shadow-lg shadow-red-950/40">ABORT NOW</button>
+        </div>
+    </dialog>
+
+    <dialog id="modal-terminal" class="bg-[#141414] border border-[#333] rounded-2xl p-6 w-full max-w-2xl text-[#eaeaea]">
+        <div class="flex justify-between items-center mb-4">
+            <div>
+                <h3 class="text-lg font-extrabold text-white tracking-tight">Console Output</h3>
+                <p class="text-xs font-semibold text-[#8c8c8c]">Raw history of live machine logs</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="btn-copy-logs" onclick="copyConsoleOutput()" class="text-xs font-bold bg-[#1a1a1a] border border-[#333] px-3 py-2 rounded-lg hover:bg-[#222]">Copy Logs</button>
+                <button onclick="closeModal('modal-terminal')" class="text-sm font-bold text-[#8c8c8c] hover:text-white px-2 py-1">✕</button>
+            </div>
+        </div>
+        <div class="space-y-4">
+            <pre id="console" class="border border-[#333] p-4 h-64 overflow-y-auto bg-[#0a0a0a] text-[#eaeaea] font-mono text-xs rounded-xl whitespace-pre-wrap leading-relaxed font-bold">System logs loading...</pre>
+            <div class="flex gap-2">
+                <input type="text" id="gcode-command" placeholder="Type custom printer instruction (e.g., G28)..." onkeydown="if(event.key === 'Enter') sendCustomGCode()" class="flex-1 bg-[#1a1a1a] border border-[#333] rounded-xl px-4 py-3.5 text-sm font-bold text-white placeholder-[#8c8c8c] disabled:opacity-50">
+                <button id="btn-send-gcode" onclick="sendCustomGCode()" class="bg-white text-black font-extrabold px-6 py-2.5 text-sm rounded-xl hover:bg-[#eaeaea] disabled:opacity-40">Send</button>
+            </div>
+        </div>
+    </dialog>
+
+    <dialog id="modal-metrics" class="bg-[#141414] border border-[#333] rounded-2xl p-6 w-full max-w-sm text-[#eaeaea]">
+        <div class="flex justify-between items-center mb-5">
+            <h3 class="text-lg font-extrabold text-white tracking-tight">Full Status Breakdown</h3>
+            <button onclick="closeModal('modal-metrics')" class="text-sm font-bold text-[#8c8c8c] hover:text-white px-2 py-1">✕</button>
+        </div>
+        <div class="divide-y divide-[#222] text-sm font-bold">
+            <div class="py-3.5 flex justify-between"><span class="text-[#a3a3a3]">Nozzle Temperature</span><strong class="font-mono font-black text-white" id="modal-metric-tool">0 °C</strong></div>
+            <div class="py-3.5 flex justify-between"><span class="text-[#a3a3a3]">Heated Bed Temperature</span><strong class="font-mono font-black text-white" id="modal-metric-bed">0 °C</strong></div>
+            <div class="py-3.5 flex justify-between"><span class="text-[#a3a3a3]">Duration Running</span><strong class="font-mono font-black text-white" id="modal-metric-elapsed">00:00:00</strong></div>
+            <div class="py-3.5 flex justify-between"><span class="text-[#a3a3a3]">Time Left Until Done</span><strong class="font-mono font-black text-white" id="modal-metric-remaining">Calculating...</strong></div>
+        </div>
+    </dialog>
+
+    <div id="toast" class="hidden fixed bottom-6 right-6 bg-[#141414]/90 border border-[#444] rounded-xl px-5 py-3.5 text-xs text-white font-extrabold z-[9999] backdrop-blur-md shadow-2xl max-w-xs transition-all flex items-center gap-2"></div>
+
+    <script>
+        let isFetching = false;
+        let isActionPending = false;
+        let currentMachineState = "disconnected";
+        let selectedFilePending = "";
+
+        document.addEventListener("DOMContentLoaded", () => {
+            loadSdCardFiles();
+            setInterval(queryMetrics, 600);
+        });
+
+        function openModal(id) { document.getElementById(id).showModal(); }
+        function closeModal(id) { document.getElementById(id).close(); }
+
+        function toast(msg, icon = 'info') {
+            const t = document.getElementById('toast');
+            t.innerHTML = `<span class="opacity-60 font-mono">[${icon.toUpperCase()}]</span> <span class="tracking-wide">${msg}</span>`;
+            t.classList.remove('hidden');
+            clearTimeout(t.timer);
+            t.timer = setTimeout(() => t.classList.add('hidden'), 2800);
+        }
+
+        function loadSdCardFiles() {
+            const fileSelect = document.getElementById('sd-file-list');
+            fileSelect.innerHTML = '<option value="">Reading print files...</option>';
+
+            fetch('/sd/list')
+                .then(res => res.ok ? res.json() : Promise.reject())
+                .then(files => {
+                    fileSelect.innerHTML = '<option value="">File picker</option>';
+                    if (!files || files.length === 0) {
+                        fileSelect.innerHTML = '<option value="">No valid files found on card</option>';
+                        return;
+                    }
+                    files.forEach(file => {
+                        const opt = document.createElement('option');
+                        opt.value = file; opt.textContent = file;
+                        fileSelect.appendChild(opt);
+                    });
+                })
+                .catch(() => {
+                    fileSelect.innerHTML = '<option value="">Unable to load card files</option>';
+                });
+        }
+
+        function handleFileSelection(filename) {
+            if (!filename || isActionPending) return;
+            selectedFilePending = filename;
+
+            document.getElementById('confirm-print-filename').innerText = filename;
+            openModal('modal-confirm-print');
+
+            document.getElementById('btn-confirm-print-execute').onclick = () => {
+                closeModal('modal-confirm-print');
+                triggerStateVerifiedAction('print', 'printing', '/control/print_file', { file: selectedFilePending });
+                document.getElementById('sd-file-list').value = "";
+            };
+        }
+
+        function triggerStateVerifiedAction(label, expectedState, endpoint, payloadBody = null) {
+            if (isActionPending && label !== 'stop') return;
+            setActionLock(true);
+            closeModal('modal-confirm-abort');
+
+            let attempts = 0;
+            const maxAttempts = 24;
+
+            function loopDispatchedSequence() {
+                if (currentMachineState === expectedState || (expectedState === 'idle' && ['idle', 'connected', 'ready'].includes(currentMachineState))) {
+                    toast(`Target verification satisfied: Now [${currentMachineState.toUpperCase()}]`, 'Success');
+                    setActionLock(false);
+                    return;
+                }
+
+                if (attempts >= maxAttempts) {
+                    toast(`Verification timeout. Printer did not enter [${expectedState.toUpperCase()}] after 60s.`, 'Warning');
+                    setActionLock(false);
+                    return;
+                }
+
+                attempts++;
+                toast(`Verifying status [${label.toUpperCase()}] (Interval check ${attempts}/${maxAttempts})...`, 'Sync');
+
+                const requestConfig = { method: 'POST' };
+                if (payloadBody) {
+                    requestConfig.headers = { 'Content-Type': 'application/json' };
+                    requestConfig.body = JSON.stringify(payloadBody);
+                }
+
+                fetch(endpoint, requestConfig)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status === "error") {
+                            toast(`Hardware exception feedback: ${data.message}`, 'Alert');
+                        }
+                    })
+                    .catch(() => console.warn(`Telemetry interface pipe temporarily saturated.`));
+
+                setTimeout(loopDispatchedSequence, 2500);
+            }
+
+            loopDispatchedSequence();
+        }
+
+        function setActionLock(locked) {
+            isActionPending = locked;
+            document.getElementById('btn-start').disabled = locked;
+            document.getElementById('btn-pause').disabled = locked;
+            document.getElementById('btn-stop').disabled = locked;
+            document.getElementById('sd-file-list').disabled = locked;
+        }
+
+        function openAbortConfirmation() {
+            openModal('modal-confirm-abort');
+        }
+
+        function queryMetrics(force = false) {
+            if (isFetching && !force) return;
+            isFetching = true;
+
+            fetch('/data')
+                .then(res => res.json())
+                .then(payload => {
+                    const toolVal = payload.tool0 ?? 0;
+                    const bedVal = payload.bed ?? 0;
+                    const elapsedVal = payload.time_elapsed || '00:00:00';
+                    const remainingVal = payload.time_remaining || 'Idle';
+
+                    document.getElementById('tool0').innerText = toolVal;
+                    document.getElementById('bed').innerText = bedVal;
+                    document.getElementById('time_elapsed').innerText = elapsedVal;
+                    document.getElementById('time_remaining').innerText = remainingVal;
+
+                    document.getElementById('modal-metric-tool').innerText = `${toolVal} °C`;
+                    document.getElementById('modal-metric-bed').innerText = `${bedVal} °C`;
+                    document.getElementById('modal-metric-elapsed').innerText = elapsedVal;
+                    document.getElementById('modal-metric-remaining').innerText = remainingVal;
+
+                    document.getElementById('filename').innerText = payload.filename || 'No active task running';
+
+                    const normalizedProgress = Math.min(Math.max(parseInt(payload.progress) || 0, 0), 100);
+                    document.getElementById('progress-fill').style.width = normalizedProgress + '%';
+                    document.getElementById('progress-lbl').innerText = normalizedProgress + '%';
+
+                    currentMachineState = (payload.status || 'disconnected').toLowerCase();
+
+                    const statusIndicator = document.getElementById('status');
+                    const dot = document.getElementById('status-dot');
+                    const jobHeaderTag = document.getElementById('job-header-tag');
+
+                    statusIndicator.innerText = payload.status || 'Unknown Status';
+
+                    if (!isActionPending) {
+                        if (currentMachineState === "printing") {
+                            dot.className = "inline-block w-3.5 h-3.5 rounded-full bg-emerald-500 animate-pulse";
+                            toggleControlButtons(false, false, false);
+                            jobHeaderTag.innerText = "Printing Active Task";
+                            jobHeaderTag.className = "text-xs font-extrabold tracking-widest text-emerald-400 uppercase block animate-pulse";
+                        } else if (currentMachineState === "paused") {
+                            dot.className = "inline-block w-3.5 h-3.5 rounded-full bg-amber-500";
+                            toggleControlButtons(false, true, false);
+                            jobHeaderTag.innerText = "Print Job Paused";
+                            jobHeaderTag.className = "text-xs font-extrabold tracking-widest text-amber-500 uppercase block";
+                        } else if (["idle", "connected", "ready"].includes(currentMachineState)) {
+                            dot.className = "inline-block w-3.5 h-3.5 rounded-full bg-blue-500";
+                            toggleControlButtons(false, true, true);
+                            jobHeaderTag.innerText = "System Idle";
+                            jobHeaderTag.className = "text-xs font-extrabold tracking-widest text-[#a3a3a3] uppercase block";
+                        } else {
+                            statusIndicator.innerText = "Connection Broken";
+                            dot.className = "inline-block w-3.5 h-3.5 rounded-full bg-rose-600";
+                            toggleControlButtons(true, true, true);
+                            jobHeaderTag.innerText = "Offline Exception";
+                            jobHeaderTag.className = "text-xs font-extrabold tracking-widest text-rose-500 uppercase block";
+                        }
+                    }
+
+                    if(payload.raw_logs && payload.raw_logs.length > 0){
+                        const consoleElem = document.getElementById('console');
+                        const isScrolledToBottom = consoleElem.scrollTop + consoleElem.clientHeight >= consoleElem.scrollHeight - 30;
+                        consoleElem.innerText = payload.raw_logs.join('\n');
+                        if (isScrolledToBottom) consoleElem.scrollTop = consoleElem.scrollHeight;
+                    }
+                })
+                .catch(() => {
+                    currentMachineState = "disconnected";
+                    document.getElementById('status').innerText = "Connection Broken";
+                    document.getElementById('status-dot').className = "inline-block w-3.5 h-3.5 rounded-full bg-rose-600";
+                })
+                .finally(() => { isFetching = false; });
+        }
+
+        function toggleControlButtons(startDisabled, pauseDisabled, stopDisabled) {
+            document.getElementById('btn-start').disabled = startDisabled;
+            document.getElementById('btn-pause').disabled = pauseDisabled;
+            document.getElementById('btn-stop').disabled = stopDisabled;
+        }
+
+        function sendCustomGCode() {
+            const inputField = document.getElementById('gcode-command');
+            const submitBtn = document.getElementById('btn-send-gcode');
+            const command = inputField.value.trim();
+            if (!command || inputField.disabled) return;
+
+            inputField.disabled = true;
+            submitBtn.disabled = true;
+
+            fetch('/control/gcode', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cmd: command })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === "error") {
+                    toast(`Printer rejected text: ${data.message}`, 'Error');
+                } else {
+                    toast(`Sent: ${command}`, 'Command');
+                    inputField.value = '';
+                }
+            })
+            .catch(() => toast("Error sending command", 'Error'))
+            .finally(() => {
+                inputField.disabled = false;
+                submitBtn.disabled = false;
+                inputField.focus();
+            });
+        }
+
+        function copyConsoleOutput() {
+            const consoleElem = document.getElementById('console');
+            const copyBtn = document.getElementById('btn-copy-logs');
+            if (!consoleElem || !consoleElem.innerText.trim()) {
+                toast("No log entries to copy", 'Notice');
+                return;
+            }
+            const logsText = consoleElem.innerText;
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(logsText)
+                    .then(() => visualCopySuccess(copyBtn))
+                    .catch(() => fallbackCopyStrategy(logsText, copyBtn));
+            } else {
+                fallbackCopyStrategy(logsText, copyBtn);
+            }
+        }
+
+        function fallbackCopyStrategy(text, buttonElement) {
+            try {
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                textArea.style.position = "fixed"; textArea.style.opacity = "0";
+                document.body.appendChild(textArea);
+                textArea.focus(); textArea.select();
+                const successful = document.execCommand('copy');
+                document.body.removeChild(textArea);
+                if (successful) visualCopySuccess(buttonElement);
+                else toast("Copy failed", 'Error');
+            } catch (err) {
+                toast("Access denied", 'Error');
+            }
+        }
+
+        function visualCopySuccess(btn) {
+            toast("Logs copied securely", 'Success');
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = `Copied!`; btn.disabled = true;
+            setTimeout(() => { btn.innerHTML = originalHtml; btn.disabled = false; }, 2000);
+        }
+    </script>
+</body>
+</html>
