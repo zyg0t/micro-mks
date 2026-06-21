@@ -1,21 +1,26 @@
 #!/bin/bash
+# Define paths
 DIR="/root/mks-robin"
-SERVICE="/etc/systemd/system/mks-robin.service"
+SERVICE_FILE="/etc/systemd/system/mks-robin.service"
 
-if [ -f "$SERVICE" ]; then
-    echo "Uninstalling service..."
-    sudo systemctl stop mks-robin && sudo systemctl disable mks-robin
-    sudo rm "$SERVICE"
-    sudo rm -rf "$DIR"
-    sudo systemctl daemon-reload
-    echo "Done. Uninstalled."
+# Check if the service file exists
+if [ -f "$SERVICE_FILE" ]; then
+    echo "Service found. Uninstalling..."
+    systemctl stop mks-robin
+    systemctl disable mks-robin
+    rm -f "$SERVICE_FILE"
+    rm -rf "$DIR"
+    systemctl daemon-reload
+    echo "Uninstalled."
 else
     echo "Installing..."
-    sudo apt-get update && sudo apt-get install -y git python3-pip
-    sudo git clone https://github.com/zyg0t/micro-mks.git "$DIR"
-    sudo pip3 install -r "$DIR/requirements.txt" --break-system-packages
-    
-    sudo bash -c "cat > $SERVICE <<EOF
+    # Ensure directory exists and clone
+    mkdir -p "$DIR"
+    git clone https://github.com/zyg0t/micro-mks.git "$DIR"
+    pip3 install -r "$DIR/requirements.txt" --break-system-packages
+
+    # Create service file
+    cat <<EOF > "$SERVICE_FILE"
 [Unit]
 Description=MKS Robin Backend
 After=network.target
@@ -28,9 +33,10 @@ User=root
 
 [Install]
 WantedBy=multi-user.target
-EOF"
-    
-    sudo systemctl daemon-reload
-    sudo systemctl enable --now mks-robin
-    echo "Installed and running!"
+EOF
+
+    # Reload and start
+    systemctl daemon-reload
+    systemctl enable --now mks-robin
+    echo "Installation complete. Service is running."
 fi
